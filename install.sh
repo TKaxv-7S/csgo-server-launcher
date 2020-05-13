@@ -36,14 +36,19 @@ if [ "$EUID" -ne 0 ]; then
 fi
 
 ### Vars
+shellPath=$(dirname $(readlink -f "$0"))
+user="steam"
+home="/home/$user"
 version=1.14.3
 downloadUrl="https://github.com/crazy-max/csgo-server-launcher/releases/download/v$version"
-scriptName="csgo-server-launcher"
-scriptPath="/etc/init.d/$scriptName"
-confPath="/etc/csgo-server-launcher/csgo-server-launcher.conf"
-steamcmdPath="/var/steamcmd"
-user="steam"
-ipAddress=$(dig -4 +short myip.opendns.com @resolver1.opendns.com)
+scriptPath="$home/csgo-server-launcher"
+steamcmdPath="$home/steamcmd"
+sourcePath="$home/sourcepath"
+rootPath="$sourcePath/root"
+pluginPath="$sourcePath/plugin"
+confPath="$sourcePath/csgo-server-launcher.conf"
+cfgPath="$sourcePath/csgoserver.cfg"
+ipAddress=$(curl ipinfo.io/ip)
 if [ -z "$ipAddress" ]; then
   echo "ERROR: Cannot retrieve your public IP address..."
   exit 1
@@ -71,7 +76,10 @@ if [ "$?" -ne "0" ]; then
 fi
 
 echo "Downloading CSGO Server Launcher script..."
-curl -sSLk ${downloadUrl}/csgo-server-launcher.sh -o ${scriptPath}
+if [ ! -f $scriptPath ]; then
+  cp $shellPath/csgo-server-launcher $scriptPath
+  #curl -sSLk ${downloadUrl}/csgo-server-launcher.sh -o ${scriptPath}
+fi
 if [ "$?" -ne "0" ]; then
   echo "ERROR: Cannot download CSGO Server Launcher script..."
   exit 1
@@ -84,18 +92,38 @@ if [ "$?" -ne "0" ]; then
   exit 1
 fi
 
-echo "Install System-V style init script link..."
-update-rc.d csgo-server-launcher defaults >/dev/null
-if [ "$?" -ne "0" ]; then
-  echo "ERROR: Cannot install System-V style init script link..."
-  exit 1
+#安装时不设置自启
+#echo "Install System-V style init script link..."
+#update-rc.d csgo-server-launcher defaults >/dev/null
+#if [ "$?" -ne "0" ]; then
+#  echo "ERROR: Cannot install System-V style init script link..."
+#  exit 1
+#fi
+
+echo "创建 $sourcePath 文件夹..."
+mkdir -p $sourcePath
+
+echo "创建 $rootPath 文件夹..."
+mkdir -p "$rootPath"
+
+echo "创建 $pluginPath 文件夹..."
+mkdir -p "$pluginPath"
+
+echo "创建 $steamcmdPath 文件夹..."
+mkdir -p "$steamcmdPath"
+
+echo "复制csgo-server-launcher.conf文件至 $confPath ..."
+if [ ! -f $confPath ]; then
+  cp $shellPath/csgo-server-launcher.conf $confPath
+  #curl -sSLk ${downloadUrl}/csgo-server-launcher.conf -o ${confPath}
 fi
 
-echo "Downloading CSGO Server Launcher configuration..."
-mkdir -p /etc/csgo-server-launcher/
-if [ ! -f $confPath ]; then
-  curl -sSLk ${downloadUrl}/csgo-server-launcher.conf -o ${confPath}
+echo "复制csgoserver.cfg文件至 $cfgPath ..."
+if [ ! -f $cfgPath ]; then
+  cp $shellPath/csgoserver.cfg $cfgPath
+  #curl -sSLk ${downloadUrl}/csgo-server-launcher.conf -o ${confPath}
 fi
+
 if [ "$?" -ne "0" ]; then
   echo "ERROR: Cannot download CSGO Server Launcher configuration..."
   exit 1
@@ -110,22 +138,22 @@ if [ "$?" -ne "0" ]; then
     echo "ERROR: Cannot add user $user..."
     exit 1
   fi
-else
-  mkdir -p ~${user}
+#else
+#  mkdir -p ~${user}
 fi
 
-echo "Creating $steamcmdPath folder..."
-mkdir -p "$steamcmdPath"
+chown -R ${user}. "$sourcePath"
 chown -R ${user}. "$steamcmdPath"
+chown ${user}. "$scriptPath"
 
 echo "Updating USER in config file..."
 sed "s#USER=\"steam\"#USER=\"$user\"#" -i "$confPath" 1>nul
 
 echo "Updating IP in config file..."
-sed "s#IP=\"198.51.100.0\"#IP=\"$ipAddress\"#" -i "$confPath"
+sed "s#IP=\"0.0.0.0\"#IP=\"$ipAddress\"#" -i "$confPath"
 
-echo "Updating DIR_STEAMCMD in config file..."
-sed "s#DIR_STEAMCMD=\"/var/steamcmd\"#DIR_STEAMCMD=\"$steamcmdPath\"#" -i "$confPath" 1>nul
+#echo "Updating DIR_STEAMCMD in config file..."
+#sed "s#DIR_STEAMCMD=\"$HOME/steamcmd\"#DIR_STEAMCMD=\"$steamcmdPath\"#" -i "$confPath" 1>nul
 
 echo ""
 echo "Done!"
@@ -133,6 +161,6 @@ echo ""
 
 echo "DO NOT FORGET to edit the configuration in '$confPath'"
 echo "Then type:"
-echo "  '$scriptPath create' to install steam and csgo"
-echo "  '$scriptPath start' to start the csgo server!"
+echo " 命令 '.$scriptPath create' 安装steam和csgo"
+echo " 命令 '.$scriptPath init <servername>' 初始化使用overlayFS的服务器"
 echo ""
