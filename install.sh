@@ -147,13 +147,13 @@ chown -R ${user}. "$steamcmdPath"
 chown ${user}. "$scriptPath"
 
 echo "Updating USER in config file..."
-sed "s#USER=\"steam\"#USER=\"$user\"#" -i "$confPath" 1>nul
+sed "s#USER=\"steam\"#USER=\"$user\"#" -i "$confPath"
 
 echo "Updating IP in config file..."
 sed "s#IP=\"0.0.0.0\"#IP=\"$ipAddress\"#" -i "$confPath"
 
 #echo "Updating DIR_STEAMCMD in config file..."
-#sed "s#DIR_STEAMCMD=\"$HOME/steamcmd\"#DIR_STEAMCMD=\"$steamcmdPath\"#" -i "$confPath" 1>nul
+#sed "s#DIR_STEAMCMD=\"$HOME/steamcmd\"#DIR_STEAMCMD=\"$steamcmdPath\"#" -i "$confPath"
 
 echo ""
 echo "Done!"
