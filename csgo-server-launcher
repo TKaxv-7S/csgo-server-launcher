@@ -170,8 +170,11 @@ function delete() {
     fi
   fi
 
-  stop
-  sleep 3
+  if status
+  then
+    stop
+    sleep 3
+  fi
   umount "$overlayFSPath"
 }
 
