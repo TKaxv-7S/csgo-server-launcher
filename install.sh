@@ -39,8 +39,8 @@ fi
 shellPath=$(dirname $(readlink -f "$0"))
 user="steam"
 home="/home/$user"
-version=1.14.3
-downloadUrl="https://github.com/crazy-max/csgo-server-launcher/releases/download/v$version"
+version=overlay_v1.0
+downloadUrl="https://github.com/TKaxv-7S/csgo-server-launcher-use-the-overlayFS/releases/download/$version"
 scriptPath="$home/csgo-server-launcher"
 steamcmdPath="$home/steamcmd"
 sourcePath="$home/sourcepath"
@@ -75,10 +75,15 @@ if [ "$?" -ne "0" ]; then
   exit 1
 fi
 
-echo "Downloading CSGO Server Launcher script..."
 if [ ! -f $scriptPath ]; then
-  cp $shellPath/csgo-server-launcher $scriptPath
-  #curl -sSLk ${downloadUrl}/csgo-server-launcher.sh -o ${scriptPath}
+  if [ -f $shellPath/csgo-server-launcher ]
+  then
+    echo "移动csgo-server-launcher文件至 $scriptPath ..."
+    mv $shellPath/csgo-server-launcher $scriptPath
+  else
+    echo "下载csgo-server-launcher文件至 $scriptPath ..."
+    curl -sSLk ${downloadUrl}/csgo-server-launcher -o ${scriptPath}
+  fi
 fi
 if [ "$?" -ne "0" ]; then
   echo "ERROR: Cannot download CSGO Server Launcher script..."
@@ -112,16 +117,27 @@ mkdir -p "$pluginPath"
 echo "创建 $steamcmdPath 文件夹..."
 mkdir -p "$steamcmdPath"
 
-echo "复制csgo-server-launcher.conf文件至 $confPath ..."
 if [ ! -f $confPath ]; then
-  cp $shellPath/csgo-server-launcher.conf $confPath
-  #curl -sSLk ${downloadUrl}/csgo-server-launcher.conf -o ${confPath}
+  if [ -f $shellPath/csgo-server-launcher.conf ]
+  then
+    echo "移动csgo-server-launcher.conf文件至 $confPath ..."
+    mv $shellPath/csgo-server-launcher.conf $confPath
+  else
+    echo "下载csgo-server-launcher.conf文件至 $confPath ..."
+    curl -sSLk ${downloadUrl}/csgo-server-launcher.conf -o ${confPath}
+  fi
 fi
 
-echo "复制csgoserver.cfg文件至 $cfgPath ..."
+echo "移动csgoserver.cfg文件至 $cfgPath ..."
 if [ ! -f $cfgPath ]; then
-  cp $shellPath/csgoserver.cfg $cfgPath
-  #curl -sSLk ${downloadUrl}/csgo-server-launcher.conf -o ${confPath}
+  if [ -f $shellPath/csgoserver.cfg ]
+  then
+    echo "移动csgoserver.cfg文件至 $cfgPath ..."
+    mv $shellPath/csgoserver.cfg $cfgPath
+  else
+    echo "下载csgoserver.cfg文件至 $cfgPath ..."
+    curl -sSLk ${downloadUrl}/csgoserver.cfg -o ${cfgPath}
+  fi
 fi
 
 if [ "$?" -ne "0" ]; then
@@ -130,7 +146,7 @@ if [ "$?" -ne "0" ]; then
 fi
 
 echo "Checking $user user exists..."
-getent passwd ${user} >/dev/null 2&>1
+getent passwd ${user} >/dev/null
 if [ "$?" -ne "0" ]; then
   echo "Adding $user user..."
   useradd -m ${user}
@@ -154,6 +170,16 @@ sed "s#IP=\"0.0.0.0\"#IP=\"$ipAddress\"#" -i "$confPath"
 
 #echo "Updating DIR_STEAMCMD in config file..."
 #sed "s#DIR_STEAMCMD=\"$HOME/steamcmd\"#DIR_STEAMCMD=\"$steamcmdPath\"#" -i "$confPath"
+
+echo "设置每天凌晨4点自动更新服务器"
+crontabCommand="0 4 * * *   .${home}/csgo-server-launcher update > /dev/null 2>&1"
+crontabNumber=$(grep -n "$crontabCommand" /etc/crontab |awk -F ":" '{print $1}')
+if [ -n "$crontabNumber" ]
+then
+  sed -i "${crontabNumber}c $crontabCommand" /etc/crontab
+else
+  echo "$crontabCommand" >> /etc/crontab
+fi
 
 echo ""
 echo "Done!"
