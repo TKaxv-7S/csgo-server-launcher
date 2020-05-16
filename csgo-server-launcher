@@ -157,7 +157,7 @@ function delete() {
     echo "服务器名称不能为空！"
     echo "请在delete命令后添加服务器名称，例：./csgo-server-launcher delete csgoserver"
     echo "已创建服务器："
-    mount -t overlay|awk "{ss=substr($3,length($OVERLAY_PATH)+1);print substr(ss,0,length(ss)-4)}"
+    mount -t overlay|awk '{ss=substr($3,length("'$OVERLAY_PATH'/")+1);print substr(ss,0,length(ss)-4)}'
     exit 1
   else
     overlayFSPath="$OVERLAY_PATH/$serverName/main"
