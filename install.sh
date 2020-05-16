@@ -173,7 +173,7 @@ sed "s#IP=\"0.0.0.0\"#IP=\"$ipAddress\"#" -i "$confPath"
 
 echo "设置每天凌晨4点自动更新服务器"
 crontabCommand="0 4 * * *   .${home}/csgo-server-launcher update > /dev/null 2>&1"
-crontabNumber=$(grep -n "$crontabCommand" /etc/crontab |awk -F ":" '{print $1}')
+crontabNumber=$(grep -n ".${home}/csgo-server-launcher update > /dev/null 2>&1" /etc/crontab |awk -F ":" '{print $1}')
 if [ -n "$crontabNumber" ]
 then
   sed -i "${crontabNumber}c $crontabCommand" /etc/crontab
