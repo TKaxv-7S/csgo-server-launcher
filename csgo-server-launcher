@@ -121,13 +121,13 @@ function init {
     echo "$overlayFSWork OVERLAYFS工作目录 已存在"
   fi
 
-  cp $SOURCE_PATH/csgo-server-launcher.conf "$overlayFSOverlay/csgo-server-launcher.conf"
-  cp $SOURCE_PATH/csgoserver.cfg "$overlayFSOverlay/csgoserver.cfg"
-
   #刷新overlay相关目录权限，只刷新目录，不能递归
-  chown ${user}:${user} "$overlayFSRoot/*"
+  chown ${USER}:${USER} "$overlayFSRoot/*"
   #刷新sourcepath权限
-  chown -R ${user}:${user} "$SOURCE_PATH"
+  chown -R ${USER}:${USER} "$SOURCE_PATH"
+
+  cp $SOURCE_PATH/csgo-server-launcher.conf "$overlayFSRoot/csgo-server-launcher.conf"
+  cp $SOURCE_PATH/csgoserver.cfg "$overlayFSRoot/csgoserver.cfg"
 
   lineNumber=$(grep -n "$overlayFSMain" /etc/fstab |awk -F ":" '{print $1}')
 
@@ -151,7 +151,7 @@ function delete() {
     exit 1
   fi
   serverName="$@"
-  overlayFSPath="$OVERLAY_PATH/$serverName/main"
+  overlayFSMain="$OVERLAY_PATH/$serverName/main"
   if [ "$serverName" = "" ]
   then
     echo "服务器名称不能为空！"
@@ -160,7 +160,7 @@ function delete() {
     mount -t overlay|awk '{ss=substr($3,length("'$OVERLAY_PATH'/")+1);print substr(ss,0,length(ss)-4)}'
     exit 1
   else
-    if [[ $(mount -t overlay|grep $overlayFSPath) = "" ]]
+    if [[ $(mount -t overlay|grep $overlayFSMain) = "" ]]
     then
       echo "$serverName 服务器不存在，请重新输入！"
       echo "已创建服务器："
@@ -174,7 +174,7 @@ function delete() {
     stop
     sleep 3
   fi
-  umount "$overlayFSPath"
+  umount "$overlayFSMain"
 }
 
 function start {
@@ -222,10 +222,10 @@ function start {
   fi
 
   #启动时刷新overlay相关目录权限，只刷新目录，用户需要所有权才可正常启动服务器
-  chown ${user}:${user} "$overlayFSRoot/*"
+  chown ${USER}:${USER} "$overlayFSPath/*"
   #递归刷新plugin与overlay目录权限 防止更新文件无权限访问
-  chown -R ${user}:${user} "$DIR_PLUGIN"
-  chown -R ${user}:${user} "$overlayFSPath/overlay"
+  chown -R ${USER}:${USER} "$DIR_PLUGIN"
+  chown -R ${USER}:${USER} "$overlayFSPath/overlay"
 
   # Generated misc args
   GENERATED_ARGS=""
@@ -240,7 +240,7 @@ function start {
 
   # Start game
   PARAM_START="${PARAM_START} ${GENERATED_ARGS}"
-  echo "Start command : $PARAM_START"
+  echo "启动命令 : $PARAM_START"
 
   if [ "$CSGO_DOCKER" = "0" ]
   then
@@ -397,7 +397,7 @@ function update {
   echo "force_install_dir $DIR_ROOT" >> "$STEAM_RUNSCRIPT"
   echo "app_update 740" >> "$STEAM_RUNSCRIPT"
   echo "quit" >> "$STEAM_RUNSCRIPT"
-  chown ${user}:${user} "$STEAM_RUNSCRIPT"
+  chown ${USER}:${USER} "$STEAM_RUNSCRIPT"
   chmod 600 "$STEAM_RUNSCRIPT"
 
   # Patch srcds_run
@@ -586,8 +586,8 @@ case "$1" in
   ;;
 
   start)
-    CONFIG_FILE="$OVERLAY_PATH/$2/main/csgo-server-launcher.conf"
-    CFG_FILE="$OVERLAY_PATH/$2/main/csgoserver.cfg"
+    CONFIG_FILE="$OVERLAY_PATH/$2/csgo-server-launcher.conf"
+    CFG_FILE="$OVERLAY_PATH/$2/csgoserver.cfg"
 
     # 检查配置文件
     if [ ! -f "$CONFIG_FILE" ]
