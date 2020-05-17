@@ -141,7 +141,6 @@ if [ ! -f $confPath ]; then
   fi
 fi
 
-echo "移动autoexec.cfg文件至 $cfgPath ..."
 if [ ! -f $cfgPath ]; then
   if [ -f $shellPath/autoexec.cfg ]
   then
