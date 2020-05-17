@@ -131,14 +131,6 @@ function init {
   cp $SOURCE_PATH/csgo-server-launcher.conf "$overlayFSRoot/csgo-server-launcher.conf"
   cp $SOURCE_PATH/autoexec.cfg "$overlayFSCfg/autoexec.cfg"
 
-  #刷新overlay相关目录权限
-  chown ${USER}:${USER} "$overlayFSMain"
-  chown ${USER}:${USER} "$overlayFSWork"
-  chown -R ${USER}:${USER} "$overlayFSOverlay"
-  chown ${USER}:${USER} "$overlayFSRoot/csgo-server-launcher.conf"
-  #刷新sourcepath目录权限
-  chown -R ${USER}:${USER} "$SOURCE_PATH"
-
   lineNumber=$(grep -n "$overlayFSMain" /etc/fstab |awk -F ":" '{print $1}')
 
   if [ -n "$lineNumber" ]
@@ -149,7 +141,16 @@ function init {
   fi
 
   mount -a
-  mount | grep "$overlayFSCommand"
+  mount | grep "$overlayFSMain"
+
+  #刷新overlay相关目录权限
+  chown ${USER}:${USER} "$overlayFSMain"
+  chown ${USER}:${USER} "$overlayFSWork"
+  chown -R ${USER}:${USER} "$overlayFSOverlay"
+  chown ${USER}:${USER} "$overlayFSRoot/csgo-server-launcher.conf"
+  #刷新sourcepath目录权限
+  chown -R ${USER}:${USER} "$SOURCE_PATH"
+
   echo "$serverName已成功挂载！使用命令'./csgo-server-launcher start $serverName'启动服务器"
 }
 
