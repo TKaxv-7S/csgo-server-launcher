@@ -75,6 +75,18 @@ if [ "$?" -ne "0" ]; then
   exit 1
 fi
 
+echo "创建 $sourcePath 文件夹..."
+mkdir -p $sourcePath
+
+echo "创建 $rootPath 文件夹..."
+mkdir -p "$rootPath"
+
+echo "创建 $pluginPath 文件夹..."
+mkdir -p "$pluginPath"
+
+echo "创建 $steamcmdPath 文件夹..."
+mkdir -p "$steamcmdPath"
+
 if [ ! -f $scriptPath ]; then
   if [ -f $shellPath/csgo-server-launcher ]
   then
@@ -104,18 +116,6 @@ fi
 #  echo "ERROR: Cannot install System-V style init script link..."
 #  exit 1
 #fi
-
-echo "创建 $sourcePath 文件夹..."
-mkdir -p $sourcePath
-
-echo "创建 $rootPath 文件夹..."
-mkdir -p "$rootPath"
-
-echo "创建 $pluginPath 文件夹..."
-mkdir -p "$pluginPath"
-
-echo "创建 $steamcmdPath 文件夹..."
-mkdir -p "$steamcmdPath"
 
 if [ ! -f $confPath ]; then
   if [ -f $shellPath/csgo-server-launcher.conf ]
