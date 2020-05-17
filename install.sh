@@ -75,6 +75,19 @@ if [ "$?" -ne "0" ]; then
   exit 1
 fi
 
+echo "Checking $user user exists..."
+getent passwd ${user} >/dev/null
+if [ "$?" -ne "0" ]; then
+  echo "Adding $user user..."
+  useradd -m ${user}
+  if [ "$?" -ne "0" ]; then
+    echo "ERROR: Cannot add user $user..."
+    exit 1
+  fi
+#else
+#  mkdir -p ~${user}
+fi
+
 echo "创建 $sourcePath 文件夹..."
 mkdir -p $sourcePath
 
@@ -145,21 +158,7 @@ if [ "$?" -ne "0" ]; then
   exit 1
 fi
 
-echo "Checking $user user exists..."
-getent passwd ${user} >/dev/null
-if [ "$?" -ne "0" ]; then
-  echo "Adding $user user..."
-  useradd -m ${user}
-  if [ "$?" -ne "0" ]; then
-    echo "ERROR: Cannot add user $user..."
-    exit 1
-  fi
-#else
-#  mkdir -p ~${user}
-fi
-
-chown -R ${user}. "$sourcePath"
-chown -R ${user}. "$steamcmdPath"
+chown -R ${user}. "$home"
 chown ${user}. "$scriptPath"
 
 echo "Updating USER in config file..."
