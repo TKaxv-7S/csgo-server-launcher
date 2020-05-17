@@ -121,14 +121,13 @@ function init {
     echo "$overlayFSWork OVERLAYFS工作目录 已存在"
   fi
 
-  CONFIG_FILE="$overlayFSOverlay/csgo-server-launcher.conf"
-  CFG_FILE="$overlayFSOverlay/csgoserver.cfg"
+  cp $SOURCE_PATH/csgo-server-launcher.conf "$overlayFSOverlay/csgo-server-launcher.conf"
+  cp $SOURCE_PATH/csgoserver.cfg "$overlayFSOverlay/csgoserver.cfg"
 
-  cp $SOURCE_PATH/csgo-server-launcher.conf $CONFIG_FILE
-  cp $SOURCE_PATH/csgoserver.cfg $CFG_FILE
-
+  #刷新overlay相关目录权限，只刷新目录，不能递归
+  chown ${user}:${user} "$overlayFSRoot/*"
   #刷新sourcepath权限
-  chown -R ${USER} "$SOURCE_PATH"
+  chown -R ${user}:${user} "$SOURCE_PATH"
 
   lineNumber=$(grep -n "$overlayFSMain" /etc/fstab |awk -F ":" '{print $1}')
 
@@ -152,6 +151,7 @@ function delete() {
     exit 1
   fi
   serverName="$@"
+  overlayFSPath="$OVERLAY_PATH/$serverName/main"
   if [ "$serverName" = "" ]
   then
     echo "服务器名称不能为空！"
@@ -160,7 +160,6 @@ function delete() {
     mount -t overlay|awk '{ss=substr($3,length("'$OVERLAY_PATH'/")+1);print substr(ss,0,length(ss)-4)}'
     exit 1
   else
-    overlayFSPath="$OVERLAY_PATH/$serverName/main"
     if [[ $(mount -t overlay|grep $overlayFSPath) = "" ]]
     then
       echo "$serverName 服务器不存在，请重新输入！"
@@ -199,6 +198,7 @@ function start {
     exit 1
   fi
   serverName="$@"
+  overlayFSPath="$OVERLAY_PATH/$serverName"
   if [ "$serverName" = "" ]
   then
     echo "服务器名称不能为空！"
@@ -207,8 +207,7 @@ function start {
     mount -t overlay|awk '{ss=substr($3,length("'$OVERLAY_PATH'/")+1);print substr(ss,0,length(ss)-4)}'
     exit 1
   else
-    overlayFSPath="$OVERLAY_PATH/$serverName/main"
-    if [[ $(mount -t overlay|grep $overlayFSPath) = "" ]]
+    if [[ $(mount -t overlay|grep "$overlayFSPath/main") = "" ]]
     then
       echo "$serverName 服务器不存在，请重新输入！"
       echo "已创建服务器："
@@ -222,21 +221,11 @@ function start {
     if status; then echo "$SCREEN_NAME 已经在运行"; exit 1; fi
   fi
 
-  #启动时用 USER 用户覆盖overlay目录权限 防止无权限访问
-  chown -R ${USER} "$OVERLAY_PATH/$serverName/overlay"
-
-  # Create runscript file for autoupdate
-  echo "Create runscript file '$STEAM_RUNSCRIPT' for autoupdate..."
-  cd "$DIR_STEAMCMD"
-  echo "login $STEAM_LOGIN $STEAM_PASSWORD" > "$STEAM_RUNSCRIPT"
-  echo "force_install_dir $DIR_ROOT" >> "$STEAM_RUNSCRIPT"
-  echo "app_update 740" >> "$STEAM_RUNSCRIPT"
-  echo "quit" >> "$STEAM_RUNSCRIPT"
-  chown ${USER} "$STEAM_RUNSCRIPT"
-  chmod 600 "$STEAM_RUNSCRIPT"
-
-  # Patch srcds_run
-  sed -i -e 's#\./steam\.sh #\./steamcmd\.sh #g' ${DIR_ROOT}/${DAEMON_GAME}
+  #启动时刷新overlay相关目录权限，只刷新目录，用户需要所有权才可正常启动服务器
+  chown ${user}:${user} "$overlayFSRoot/*"
+  #递归刷新plugin与overlay目录权限 防止更新文件无权限访问
+  chown -R ${user}:${user} "$DIR_PLUGIN"
+  chown -R ${user}:${user} "$overlayFSPath/overlay"
 
   # Generated misc args
   GENERATED_ARGS=""
@@ -401,6 +390,19 @@ function update {
     fi
   fi
 
+  # Create runscript file for autoupdate
+  echo "Create runscript file '$STEAM_RUNSCRIPT' for autoupdate..."
+  cd "$DIR_STEAMCMD"
+  echo "login $STEAM_LOGIN $STEAM_PASSWORD" > "$STEAM_RUNSCRIPT"
+  echo "force_install_dir $DIR_ROOT" >> "$STEAM_RUNSCRIPT"
+  echo "app_update 740" >> "$STEAM_RUNSCRIPT"
+  echo "quit" >> "$STEAM_RUNSCRIPT"
+  chown ${user}:${user} "$STEAM_RUNSCRIPT"
+  chmod 600 "$STEAM_RUNSCRIPT"
+
+  # Patch srcds_run
+  sed -i -e 's#\./steam\.sh #\./steamcmd\.sh #g' ${DIR_ROOT}/${DAEMON_GAME}
+
   # Check for update
   if [ $(egrep -ic "Success! App '740' fully installed." "$UPDATE_LOG") -gt 0 ] || [ $(egrep -ic "Success! App '740' already up to date" "$UPDATE_LOG") -gt 0 ]
   then
@@ -432,7 +434,7 @@ function update {
     echo "Restart $SCREEN_NAME..."
     start
     sleep 5
-    echo "$SCREEN_NAME restarted successfully"
+    echo "$SCREEN_NAME changeed successfully"
   fi
 }
 
@@ -523,28 +525,22 @@ function create {
 }
 
 function usage {
-  echo "Usage: service csgo-server-launcher {init|start|stop|status|restart|console|update|create}"
+  echo "Usage: service csgo-server-launcher {init|delete|start|stop|status|change|console|update|create}"
   echo "On console, press CTRL+A then D to stop the screen without stopping the server."
 }
 
 ### BEGIN ###
 
 
-# Default config
+# 默认配置
 SCREEN_NAME="csgoserver"
 USER="steam"
 HOME="/home/$USER"
 IP="0.0.0.0"
-PORT="27015"
-GSLT=""
 OVERLAY_PATH="$HOME/server"
 SOURCE_PATH="$HOME/sourcepath"
 DIR_STEAMCMD="$HOME/steamcmd"
 DIR_LOGS="$HOME/logs"
-STEAM_LOGIN="anonymous"
-STEAM_PASSWORD="anonymous"
-CONFIG_FILE="$SOURCE_PATH/csgo-server-launcher.conf"
-CFG_FILE="$SOURCE_PATH/csgoserver.cfg"
 STEAM_RUNSCRIPT="$DIR_STEAMCMD/runscript_$SCREEN_NAME"
 DIR_ROOT="$SOURCE_PATH/root"
 DIR_PLUGIN="$SOURCE_PATH/plugin"
@@ -555,25 +551,6 @@ UPDATE_EMAIL=""
 UPDATE_RETRY=3
 CLEAR_DOWNLOAD_CACHE=0
 
-# Game config
-API_AUTHORIZATION_KEY=""
-WORKSHOP_COLLECTION_ID=""
-WORKSHOP_START_MAP=""
-MAXPLAYERS="14"
-TICKRATE="128"
-EXTRAPARAMS="-tvdisable -nohltv"
-PARAM_START="-nobreakpad -game csgo -usercon -console -usercon -secure -autoupdate -steam_dir ${DIR_STEAMCMD} -steamcmd_script ${STEAM_RUNSCRIPT} -maxplayers_override ${MAXPLAYERS} -tickrate ${TICKRATE} +hostport ${PORT} +net_public_adr ${IP} +game_type ${GAMETYPE} +game_mode ${GAMEMODE} +mapgroup ${MAPGROUP} +map ${DEFAULTMAP} +servercfgfile ${CFG_FILE} ${EXTRAPARAMS}"
-PARAM_UPDATE="+login ${STEAM_LOGIN} ${STEAM_PASSWORD} +force_install_dir ${DIR_ROOT} +app_update 740 validate +quit"
-
-# Check config file
-if [ ! -f "$CONFIG_FILE" ]
-then
-  echo "ERROR: Config file $CONFIG_FILE not found..."
-  exit 1
-fi
-
-# Load config
-source "$CONFIG_FILE"
 CSGO_DOCKER=${CSGO_DOCKER:-0}
 USER_HOME=$(eval echo ~${USER})
 
@@ -609,10 +586,41 @@ case "$1" in
   ;;
 
   start)
+    CONFIG_FILE="$OVERLAY_PATH/$2/main/csgo-server-launcher.conf"
+    CFG_FILE="$OVERLAY_PATH/$2/main/csgoserver.cfg"
+
+    # 检查配置文件
+    if [ ! -f "$CONFIG_FILE" ]
+    then
+      echo "错误: 配置文件 $CONFIG_FILE 不存在！"
+      exit 1
+    fi
+
+    # 游戏默认配置
+    API_AUTHORIZATION_KEY=""
+    WORKSHOP_COLLECTION_ID=""
+    WORKSHOP_START_MAP=""
+    PORT="27015"
+    GSLT=""
+    MAXPLAYERS="14"
+    TICKRATE="128"
+    EXTRAPARAMS="-tvdisable -nohltv"
+    PARAM_START="-nobreakpad -game csgo -usercon -console -usercon -secure -autoupdate -steam_dir ${DIR_STEAMCMD} -steamcmd_script ${STEAM_RUNSCRIPT} -maxplayers_override ${MAXPLAYERS} -tickrate ${TICKRATE} +hostport ${PORT} +net_public_adr ${IP} +game_type ${GAMETYPE} +game_mode ${GAMEMODE} +mapgroup ${MAPGROUP} +map ${DEFAULTMAP} ${EXTRAPARAMS}"
+    # 加载配置
+    source "$CONFIG_FILE"
+
+    # 检查服务器cfg文件
+    if [ ! -f "$CFG_FILE" ]
+    then
+      echo "未找到 $CFG_FILE ，服务器将不会加载外部cfg！"
+    else
+      PARAM_START="${PARAM_START} +servercfgfile ${CFG_FILE}"
+    fi
+
     echo "启动 $SCREEN_NAME $2 中..."
     start $2
     sleep 5
-    echo "$SCREEN_NAME started successfully"
+    echo "$SCREEN_NAME $2 启动成功！"
   ;;
 
   stop)
@@ -622,13 +630,27 @@ case "$1" in
     echo "$SCREEN_NAME stopped successfully"
   ;;
 
-  restart)
-    echo "Restarting $SCREEN_NAME..."
+  change)
+    if [ "$2" = "" ]
+    then
+      serverNum=$(mount -t overlay|awk 'END{print NR}')
+      if [ $serverNum -eq 0 ]
+      then
+        echo "已创建服务器数量：$serverNum，请使用init命令创建服务器！"
+        exit 1
+      fi
+      echo "服务器名称不能为空！"
+      echo "请在change命令后添加服务器名称，例：./csgo-server-launcher change csgoserver"
+      echo "已创建服务器："
+      mount -t overlay|awk '{ss=substr($3,length("'$OVERLAY_PATH'/")+1);print substr(ss,0,length(ss)-4)}'
+      exit 1
+    fi
+    echo "更换 $SCREEN_NAME $2 中..."
     status && stop
     sleep 5
-    start
+    start $2
     sleep 5
-    echo "$SCREEN_NAME restarted successfully"
+    echo "$SCREEN_NAME $2 更换成功！"
   ;;
 
   status)
@@ -644,6 +666,10 @@ case "$1" in
   ;;
 
   update)
+    STEAM_LOGIN="anonymous"
+    STEAM_PASSWORD="anonymous"
+    PARAM_UPDATE="+login ${STEAM_LOGIN} ${STEAM_PASSWORD} +force_install_dir ${DIR_ROOT} +app_update 740 validate +quit"
+
     echo "Updating $SCREEN_NAME..."
     update
   ;;

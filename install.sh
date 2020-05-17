@@ -56,7 +56,7 @@ fi
 
 ### Start
 echo ""
-echo "Starting CSGO Server Launcher install (v${version})..."
+echo "Starting CSGO Server Launcher install (${version})..."
 echo ""
 
 echo "Adding i386 architecture..."
@@ -158,8 +158,10 @@ if [ "$?" -ne "0" ]; then
   exit 1
 fi
 
-chown -R ${user}. "$home"
-chown ${user}. "$scriptPath"
+#此处不可修改server文件夹，会触发overlayFS修改复制，导致服务程序大量复制！
+chown -R ${user}:${user} "$sourcePath"
+chown -R ${user}:${user} "$steamcmdPath"
+chown ${user}:${user} "$scriptPath"
 
 echo "Updating USER in config file..."
 sed "s#USER=\"steam\"#USER=\"$user\"#" -i "$confPath"
