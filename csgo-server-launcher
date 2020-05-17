@@ -526,12 +526,41 @@ function create {
 }
 
 function usage {
-  echo "Usage: service csgo-server-launcher {init|delete|start|stop|loadconfig|status|change|console|update|create}"
+  echo "Usage: service csgo-server-launcher {init|delete|start|stop|status|change|console|update|create}"
   echo "On console, press CTRL+A then D to stop the screen without stopping the server."
 }
 
-### BEGIN ###
+function loadconfig {
+  CONFIG_FILE="$OVERLAY_PATH/$@/csgo-server-launcher.conf"
+  # 检查配置文件
+  if [ ! -f "$CONFIG_FILE" ]
+  then
+    echo "错误: 配置文件 $CONFIG_FILE 不存在！"
+    exit 1
+  fi
 
+  CFG_FILE="$OVERLAY_PATH/$@/csgoserver.cfg"
+  # 游戏默认配置
+  API_AUTHORIZATION_KEY=""
+  WORKSHOP_COLLECTION_ID=""
+  WORKSHOP_START_MAP=""
+  PORT="27015"
+  GSLT=""
+  MAXPLAYERS="14"
+  TICKRATE="128"
+  EXTRAPARAMS="-tvdisable -nohltv"
+  PARAM_START="-nobreakpad -game csgo -usercon -console -usercon -secure -autoupdate -steam_dir ${DIR_STEAMCMD} -steamcmd_script ${STEAM_RUNSCRIPT} -maxplayers_override ${MAXPLAYERS} -tickrate ${TICKRATE} +hostport ${PORT} +net_public_adr ${IP} +game_type ${GAMETYPE} +game_mode ${GAMEMODE} +mapgroup ${MAPGROUP} +map ${DEFAULTMAP} ${EXTRAPARAMS}"
+
+  # 加载配置
+  source "$CONFIG_FILE"
+  # 检查服务器cfg文件
+  if [ ! -f "$CFG_FILE" ]
+  then
+    echo "未找到 $CFG_FILE ，服务器将不会加载外部cfg！"
+  else
+    PARAM_START="${PARAM_START} +servercfgfile ${CFG_FILE}"
+  fi
+}
 
 # 默认配置
 SCREEN_NAME="csgoserver"
@@ -598,38 +627,6 @@ case "$1" in
     stop
     sleep 5
     echo "$SCREEN_NAME stopped successfully"
-  ;;
-
-  loadconfig)
-    CONFIG_FILE="$OVERLAY_PATH/$@/csgo-server-launcher.conf"
-    # 检查配置文件
-    if [ ! -f "$CONFIG_FILE" ]
-    then
-      echo "错误: 配置文件 $CONFIG_FILE 不存在！"
-      exit 1
-    fi
-
-    CFG_FILE="$OVERLAY_PATH/$@/csgoserver.cfg"
-    # 游戏默认配置
-    API_AUTHORIZATION_KEY=""
-    WORKSHOP_COLLECTION_ID=""
-    WORKSHOP_START_MAP=""
-    PORT="27015"
-    GSLT=""
-    MAXPLAYERS="14"
-    TICKRATE="128"
-    EXTRAPARAMS="-tvdisable -nohltv"
-    PARAM_START="-nobreakpad -game csgo -usercon -console -usercon -secure -autoupdate -steam_dir ${DIR_STEAMCMD} -steamcmd_script ${STEAM_RUNSCRIPT} -maxplayers_override ${MAXPLAYERS} -tickrate ${TICKRATE} +hostport ${PORT} +net_public_adr ${IP} +game_type ${GAMETYPE} +game_mode ${GAMEMODE} +mapgroup ${MAPGROUP} +map ${DEFAULTMAP} ${EXTRAPARAMS}"
-
-    # 加载配置
-    source "$CONFIG_FILE"
-    # 检查服务器cfg文件
-    if [ ! -f "$CFG_FILE" ]
-    then
-      echo "未找到 $CFG_FILE ，服务器将不会加载外部cfg！"
-    else
-      PARAM_START="${PARAM_START} +servercfgfile ${CFG_FILE}"
-    fi
   ;;
 
   change)
