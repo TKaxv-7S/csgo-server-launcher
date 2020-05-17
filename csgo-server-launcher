@@ -87,6 +87,7 @@ function init {
   overlayFSRoot="$OVERLAY_PATH/$serverName"
   overlayFSMain="$overlayFSRoot/main"
   overlayFSOverlay="$overlayFSRoot/overlay"
+  overlayFSCfg="$overlayFSOverlay/csgo/cfg"
   overlayFSWrite="$overlayFSRoot/write"
   overlayFSWork="$overlayFSRoot/work"
   overlayFSCommand="overlay $overlayFSMain overlay lowerdir=$overlayFSOverlay:$DIR_PLUGIN:$DIR_ROOT,upperdir=$overlayFSWrite,workdir=$overlayFSWork 0 0"
@@ -108,6 +109,12 @@ function init {
   else
     echo "$overlayFSOverlay OVERLAYFS覆盖目录 已存在"
   fi
+  if [ ! -f $overlayFSCfg ]; then
+    echo "创建$overlayFSCfg cfg配置目录"
+    mkdir -p "$overlayFSCfg"
+  else
+    echo "$overlayFSCfg cfg配置目录 已存在"
+  fi
   if [ ! -f $overlayFSWrite ]; then
     echo "创建$overlayFSWrite OVERLAYFS可写目录"
     mkdir -p "$overlayFSWrite"
@@ -121,13 +128,16 @@ function init {
     echo "$overlayFSWork OVERLAYFS工作目录 已存在"
   fi
 
-  #刷新overlay相关目录权限，只刷新目录，不能递归
-  chown ${USER}:${USER} "$overlayFSRoot/*"
-  #刷新sourcepath权限
-  chown -R ${USER}:${USER} "$SOURCE_PATH"
-
   cp $SOURCE_PATH/csgo-server-launcher.conf "$overlayFSRoot/csgo-server-launcher.conf"
-  cp $SOURCE_PATH/csgoserver.cfg "$overlayFSRoot/csgoserver.cfg"
+  cp $SOURCE_PATH/autoexec.cfg "$overlayFSCfg/autoexec.cfg"
+
+  #刷新overlay相关目录权限
+  chown ${USER}:${USER} "$overlayFSMain"
+  chown ${USER}:${USER} "$overlayFSWork"
+  chown -R ${USER}:${USER} "$overlayFSOverlay"
+  chown ${USER}:${USER} "$overlayFSRoot/csgo-server-launcher.conf"
+  #刷新sourcepath目录权限
+  chown -R ${USER}:${USER} "$SOURCE_PATH"
 
   lineNumber=$(grep -n "$overlayFSMain" /etc/fstab |awk -F ":" '{print $1}')
 
@@ -223,11 +233,12 @@ function start {
   fi
 
   #启动时刷新overlay相关目录权限，只刷新目录，用户需要所有权才可正常启动服务器
-  chown ${USER}:${USER} "$overlayFSPath/*"
-  chmod +x "$CFG_FILE"
-  #递归刷新plugin与overlay目录权限 防止更新文件无权限访问
-  chown -R ${USER}:${USER} "$DIR_PLUGIN"
+  chown ${USER}:${USER} "$overlayFSPath/main"
+  chown ${USER}:${USER} "$overlayFSPath/work"
   chown -R ${USER}:${USER} "$overlayFSPath/overlay"
+  chown ${USER}:${USER} "$CONFIG_FILE"
+  #递归刷新plugin目录权限 防止更新文件无权限访问
+  chown -R ${USER}:${USER} "$DIR_PLUGIN"
 
   # Generated misc args
   GENERATED_ARGS=""
@@ -540,7 +551,7 @@ function loadconfig {
     exit 1
   fi
 
-  CFG_FILE="$OVERLAY_PATH/$@/csgoserver.cfg"
+  CFG_FILE="$OVERLAY_PATH/$@/overlay/csgo/cfg/autoexec.cfg"
   # 游戏默认配置
   API_AUTHORIZATION_KEY=""
   WORKSHOP_COLLECTION_ID=""
@@ -559,7 +570,10 @@ function loadconfig {
   then
     echo "未找到 $CFG_FILE ，服务器将不会加载外部cfg！"
   else
-    PARAM_START="${PARAM_START} +servercfgfile ${CFG_FILE}"
+    INNER_CFG_FILE="$OVERLAY_PATH/$@/overlay/csgo/cfg/autoexec.cfg"
+    if [ "$CFG_FILE" != "$INNER_CFG_FILE" ]; then
+      cp $CFG_FILE "$INNER_CFG_FILE"
+    fi
   fi
 }
 
