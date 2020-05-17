@@ -224,6 +224,7 @@ function start {
 
   #启动时刷新overlay相关目录权限，只刷新目录，用户需要所有权才可正常启动服务器
   chown ${USER}:${USER} "$overlayFSPath/*"
+  chmod +x "$CFG_FILE"
   #递归刷新plugin与overlay目录权限 防止更新文件无权限访问
   chown -R ${USER}:${USER} "$DIR_PLUGIN"
   chown -R ${USER}:${USER} "$overlayFSPath/overlay"
