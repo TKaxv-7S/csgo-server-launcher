@@ -129,7 +129,7 @@ function init {
   fi
 
   cp $SOURCE_PATH/csgo-server-launcher.conf "$overlayFSRoot/csgo-server-launcher.conf"
-  cp $SOURCE_PATH/autoexec.cfg "$overlayFSCfg/autoexec.cfg"
+  cp $SOURCE_PATH/csgoserver.cfg "$overlayFSRoot/csgoserver.cfg"
 
   lineNumber=$(grep -n "$overlayFSMain" /etc/fstab |awk -F ":" '{print $1}')
 
@@ -147,6 +147,7 @@ function init {
   chown ${USER}:${USER} "$overlayFSMain"
   chown ${USER}:${USER} "$overlayFSWork"
   chown -R ${USER}:${USER} "$overlayFSOverlay"
+  chown ${USER}:${USER} "$overlayFSRoot/csgoserver.cfg"
   chown ${USER}:${USER} "$overlayFSRoot/csgo-server-launcher.conf"
   #刷新sourcepath目录权限
   chown -R ${USER}:${USER} "$SOURCE_PATH"
@@ -237,7 +238,6 @@ function start {
   chown ${USER}:${USER} "$overlayFSPath/main"
   chown ${USER}:${USER} "$overlayFSPath/work"
   chown -R ${USER}:${USER} "$overlayFSPath/overlay"
-  chown ${USER}:${USER} "$CONFIG_FILE"
   #递归刷新plugin目录权限 防止更新文件无权限访问
   chown -R ${USER}:${USER} "$DIR_PLUGIN"
 
@@ -551,8 +551,8 @@ function loadconfig {
     echo "错误: 配置文件 $CONFIG_FILE 不存在！"
     exit 1
   fi
-
-  CFG_FILE="$OVERLAY_PATH/$@/overlay/csgo/cfg/autoexec.cfg"
+  chown ${USER}:${USER} "$CONFIG_FILE"
+  CFG_FILE="$OVERLAY_PATH/$@/csgoserver.cfg"
   # 游戏默认配置
   API_AUTHORIZATION_KEY=""
   WORKSHOP_COLLECTION_ID=""
@@ -571,9 +571,10 @@ function loadconfig {
   then
     echo "未找到 $CFG_FILE ，服务器将不会加载外部cfg！"
   else
-    INNER_CFG_FILE="$OVERLAY_PATH/$@/overlay/csgo/cfg/autoexec.cfg"
+    INNER_CFG_FILE="$OVERLAY_PATH/$@/overlay/csgo/cfg/csgoserver.cfg"
     if [ "$CFG_FILE" != "$INNER_CFG_FILE" ]; then
-      cp $CFG_FILE "$INNER_CFG_FILE"
+      \cp -f $CFG_FILE "$INNER_CFG_FILE"
+      PARAM_START="${PARAM_START} +servercfgfile csgoserver.cfg"
     fi
   fi
 }

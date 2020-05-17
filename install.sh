@@ -47,7 +47,7 @@ sourcePath="$home/sourcepath"
 rootPath="$sourcePath/root"
 pluginPath="$sourcePath/plugin"
 confPath="$sourcePath/csgo-server-launcher.conf"
-cfgPath="$sourcePath/autoexec.cfg"
+cfgPath="$sourcePath/csgoserver.cfg"
 ipAddress=$(curl ipinfo.io/ip)
 if [ -z "$ipAddress" ]; then
   echo "ERROR: Cannot retrieve your public IP address..."
@@ -142,13 +142,13 @@ if [ ! -f $confPath ]; then
 fi
 
 if [ ! -f $cfgPath ]; then
-  if [ -f $shellPath/autoexec.cfg ]
+  if [ -f $shellPath/csgoserver.cfg ]
   then
-    echo "移动autoexec.cfg文件至 $cfgPath ..."
-    mv $shellPath/autoexec.cfg $cfgPath
+    echo "移动csgoserver.cfg文件至 $cfgPath ..."
+    mv $shellPath/csgoserver.cfg $cfgPath
   else
-    echo "下载autoexec.cfg文件至 $cfgPath ..."
-    curl -sSLk ${downloadUrl}/autoexec.cfg -o ${cfgPath}
+    echo "下载csgoserver.cfg文件至 $cfgPath ..."
+    curl -sSLk ${downloadUrl}/csgoserver.cfg -o ${cfgPath}
   fi
 fi
 
