@@ -281,17 +281,17 @@ function stop {
 
   if ! status; then echo "$SCREEN_NAME could not be found. Probably not running."; exit 1; fi
   echo "正在关闭所有 $SCREEN_NAME 服务器..."
-  closeserver=''
+  closedservers=''
   if [ $(id -u) -eq 0 ]
   then
-    closeserver=$(su - ${USER} -c "screen -ls" | awk -F . "/\.$SCREEN_NAME\./ {print $1}" | awk '{print $1}')
-    su - ${USER} -c "$closeserver | awk '{print \"screen -r \""'$1'"\" -X quit\"}' | sh ; rm -f '$DIR_ROOT/screenlog.*'"
+    closedservers=$(su - ${USER} -c "screen -ls" | awk -F . "/\.$SCREEN_NAME\./ {print $1}" | awk '{print $1}')
+    su - ${USER} -c "echo $closedservers | awk '{print \"screen -r \""'$1'"\" -X quit\"}' | sh ; rm -f '$DIR_ROOT/screenlog.*'"
   else
-    closeserver=$(screen -ls | awk -F . "/\.$SCREEN_NAME\./ {print $1}" | awk '{print $1}')
-    $closeserver | awk '{print "screen -r "$1" -X quit"}' | sh
+    closedservers=$(screen -ls | awk -F . "/\.$SCREEN_NAME\./ {print $1}" | awk '{print $1}')
+    echo $closedservers | awk '{print "screen -r "$1" -X quit"}' | sh
     rm -f "$DIR_ROOT/screenlog.*"
   fi
-  echo $closeserver | awk -F . '{print $3}'
+  TEMP_SERVERS=$(echo $closedservers | awk -F . '{print $3}')
 }
 
 function status {
@@ -356,13 +356,14 @@ function update {
 
   if [ -z "$1" ]; then retry=0; else retry=$1; fi
 
-  tmpservers=''
   if [ -z "$2" -a "$CSGO_DOCKER" = "0" ]
   then
     if status
     then
-      tmpservers=$(stop)
-      echo "Stop $SCREEN_NAME before update..."
+      echo "关闭 $SCREEN_NAME 中..."
+      stop
+      echo "已关闭以下服务器："
+      echo $TEMP_SERVERS
       sleep 5
       relaunch=1
     else
@@ -450,8 +451,8 @@ function update {
 
   if [ "${relaunch}" = "1" -a "$CSGO_DOCKER" = "0" ]
   then
-    echo "Restart $SCREEN_NAME..."
-    for line in $tmpservers
+    echo "重启 $SCREEN_NAME 中..."
+    for line in $TEMP_SERVERS
     do
       echo "启动 $SCREEN_NAME $line 中..."
       start $line
@@ -606,6 +607,7 @@ UPDATE_LOG="$DIR_LOGS/update_$(date +%Y%m%d).log"
 UPDATE_EMAIL=""
 UPDATE_RETRY=3
 CLEAR_DOWNLOAD_CACHE=0
+TEMP_SERVERS=""
 
 CSGO_DOCKER=${CSGO_DOCKER:-0}
 USER_HOME=$(eval echo ~${USER})
