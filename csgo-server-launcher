@@ -285,7 +285,7 @@ function stop {
   if [ $(id -u) -eq 0 ]
   then
     closeserver=$(su - ${USER} -c "screen -ls" | awk -F . "/\.$SCREEN_NAME\./ {print $1}" | awk '{print $1}')
-    su - ${USER} -c "$tmpserver | awk '{print \"screen -r \""'$1'"\" -X quit\"}' | sh ; rm -f '$DIR_ROOT/screenlog.*'"
+    su - ${USER} -c "$closeserver | awk '{print \"screen -r \""'$1'"\" -X quit\"}' | sh ; rm -f '$DIR_ROOT/screenlog.*'"
   else
     closeserver=$(screen -ls | awk -F . "/\.$SCREEN_NAME\./ {print $1}" | awk '{print $1}')
     $closeserver | awk '{print "screen -r "$1" -X quit"}' | sh
