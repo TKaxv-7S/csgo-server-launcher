@@ -39,7 +39,7 @@ fi
 shellPath=$(dirname $(readlink -f "$0"))
 user="steam"
 home="/home/$user"
-version=overlay_v1.0
+version=overlay_v1.0.1
 downloadUrl="https://github.com/TKaxv-7S/csgo-server-launcher-use-the-overlayFS/releases/download/$version"
 scriptPath="$home/csgo-server-launcher"
 steamcmdPath="$home/steamcmd"

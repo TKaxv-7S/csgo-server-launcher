@@ -260,11 +260,11 @@ function start {
   then
     if [ $(id -u) -eq 0 ]
     then
-      su - ${USER} -c "cd $OVERLAY_PATH/$serverName/main ; rm -f screenlog.* ; screen -L -AmdS $SCREEN_NAME ./$DAEMON_GAME $PARAM_START"
+      su - ${USER} -c "cd $OVERLAY_PATH/$serverName/main ; rm -f screenlog.* ; screen -L -AmdS $SCREEN_NAME.$serverName ./$DAEMON_GAME $PARAM_START"
     else
       cd "$OVERLAY_PATH/$serverName/main"
       rm -f screenlog.*
-      screen -L -AmdS ${SCREEN_NAME} ./${DAEMON_GAME} ${PARAM_START}
+      screen -L -AmdS ${SCREEN_NAME}.${serverName} ./${DAEMON_GAME} ${PARAM_START}
     fi
   else
     cd "$OVERLAY_PATH/$serverName/main"
@@ -280,14 +280,18 @@ function stop {
   fi
 
   if ! status; then echo "$SCREEN_NAME could not be found. Probably not running."; exit 1; fi
+  echo "正在关闭所有 $SCREEN_NAME 服务器..."
+  closeserver=''
   if [ $(id -u) -eq 0 ]
   then
-    tmp=$(su - ${USER} -c "screen -ls" | awk -F . "/\.$SCREEN_NAME\t/ {print $1}" | awk '{print $1}')
-    su - ${USER} -c "screen -r $tmp -X quit ; rm -f '$DIR_ROOT/screenlog.*'"
+    closeserver=$(su - ${USER} -c "screen -ls" | awk -F . "/\.$SCREEN_NAME\./ {print $1}" | awk '{print $1}')
+    su - ${USER} -c "$tmpserver | awk '{print \"screen -r \""'$1'"\" -X quit\"}' | sh ; rm -f '$DIR_ROOT/screenlog.*'"
   else
-    screen -r $(screen -ls | awk -F . "/\.$SCREEN_NAME\t/ {print $1}" | awk '{print $1}') -X quit
+    closeserver=$(screen -ls | awk -F . "/\.$SCREEN_NAME\./ {print $1}" | awk '{print $1}')
+    $closeserver | awk '{print "screen -r "$1" -X quit"}' | sh
     rm -f "$DIR_ROOT/screenlog.*"
   fi
+  echo $closeserver | awk -F . '{print $3}'
 }
 
 function status {
@@ -299,9 +303,9 @@ function status {
 
   if [ $(id -u) -eq 0 ]
   then
-    su - ${USER} -c "screen -ls" | grep [.]${SCREEN_NAME}[[:space:]] > /dev/null
+    su - ${USER} -c "screen -ls" | grep [.]${SCREEN_NAME}[.] > /dev/null
   else
-    screen -ls | grep [.]${SCREEN_NAME}[[:space:]] > /dev/null
+    screen -ls | grep [.]${SCREEN_NAME}[.] > /dev/null
   fi
 }
 
@@ -316,10 +320,10 @@ function console {
 
   if [ $(id -u) -eq 0 ]
   then
-    tmp=$(su - ${USER} -c "screen -ls" | awk -F . "/\.$SCREEN_NAME\t/ {print $1}" | awk '{print $1}')
+    tmp=$(su - ${USER} -c "screen -ls" | awk -F . "/\.$SCREEN_NAME\./ {print $1}" | awk '{print $1}')
     su - ${USER} -c "script -q -c 'screen -r $tmp' /dev/null"
   else
-    screen -r $(screen -ls | awk -F . "/\.$SCREEN_NAME\t/ {print $1}" | awk '{print $1}')
+    screen -r $(screen -ls | awk -F . "/\.$SCREEN_NAME\./ {print $1}" | awk '{print $1}')
   fi
 }
 
@@ -352,11 +356,12 @@ function update {
 
   if [ -z "$1" ]; then retry=0; else retry=$1; fi
 
+  tmpservers=''
   if [ -z "$2" -a "$CSGO_DOCKER" = "0" ]
   then
     if status
     then
-      stop
+      tmpservers=$(stop)
       echo "Stop $SCREEN_NAME before update..."
       sleep 5
       relaunch=1
@@ -446,7 +451,11 @@ function update {
   if [ "${relaunch}" = "1" -a "$CSGO_DOCKER" = "0" ]
   then
     echo "Restart $SCREEN_NAME..."
-    start
+    for line in $tmpservers
+    do
+      echo "启动 $SCREEN_NAME $line 中..."
+      start $line
+    done
     sleep 5
     echo "$SCREEN_NAME changeed successfully"
   fi
