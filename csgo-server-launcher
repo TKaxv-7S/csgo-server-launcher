@@ -74,14 +74,13 @@ function init {
   if [ "$serverName" = "" ]
   then
     echo "服务器名称不能为空！"
-    echo "请在init命令后添加服务名称，例：./csgo-server-launcher init csgoserver"
+    echo "请在init命令后添加服务名称，例：csgo-server-launcher init csgoserver"
     exit 1
-  else
-    if [[ $(mount -t overlay|grep "$OVERLAY_PATH/$serverName/main") != "" ]]
-    then
-      echo "服务器 $serverName 已存在！不可重复创建！"
-      exit 1
-    fi
+  fi
+
+  if [ ! -f "$MAP_FILE" ];
+  then
+    touch "$MAP_FILE"
   fi
 
   overlayFSRoot="$OVERLAY_PATH/$serverName"
@@ -90,38 +89,47 @@ function init {
   overlayFSCfg="$overlayFSOverlay/csgo/cfg"
   overlayFSWrite="$overlayFSRoot/write"
   overlayFSWork="$overlayFSRoot/work"
-  overlayFSCommand="overlay $overlayFSMain overlay lowerdir=$overlayFSOverlay:$DIR_PLUGIN:$DIR_ROOT,upperdir=$overlayFSWrite,workdir=$overlayFSWork 0 0"
-  if [ ! -f $overlayFSRoot ]; then
+  overlayFSCommand="lowerdir=$overlayFSOverlay:$DIR_PLUGIN:$DIR_ROOT,upperdir=$overlayFSWrite,workdir=$overlayFSWork $overlayFSMain"
+
+  lineNumber=$(grep -n "$overlayFSMain" $MAP_FILE |awk -F ":" '{print $1}')
+  if [ -n "$lineNumber" ]
+  then
+    #sed -i "${lineNumber}c $overlayFSCommand" $MAP_FILE
+    echo "服务器 $serverName 已存在！不可重复创建！"
+    exit 1
+  fi
+
+  if [ ! -d $overlayFSRoot ]; then
     echo "创建$overlayFSRoot OVERLAYFS根目录"
     mkdir -p "$overlayFSRoot"
   else
     echo "$overlayFSRoot OVERLAYFS根目录 已存在"
   fi
-  if [ ! -f $overlayFSMain ]; then
+  if [ ! -d $overlayFSMain ]; then
     echo "创建$overlayFSMain OVERLAYFS主目录"
     mkdir -p "$overlayFSMain"
   else
     echo "$overlayFSMain OVERLAYFS主目录 已存在"
   fi
-  if [ ! -f $overlayFSOverlay ]; then
+  if [ ! -d $overlayFSOverlay ]; then
     echo "创建$overlayFSOverlay OVERLAYFS覆盖目录"
     mkdir -p "$overlayFSOverlay"
   else
     echo "$overlayFSOverlay OVERLAYFS覆盖目录 已存在"
   fi
-  if [ ! -f $overlayFSCfg ]; then
+  if [ ! -d $overlayFSCfg ]; then
     echo "创建$overlayFSCfg cfg配置目录"
     mkdir -p "$overlayFSCfg"
   else
     echo "$overlayFSCfg cfg配置目录 已存在"
   fi
-  if [ ! -f $overlayFSWrite ]; then
+  if [ ! -d $overlayFSWrite ]; then
     echo "创建$overlayFSWrite OVERLAYFS可写目录"
     mkdir -p "$overlayFSWrite"
   else
     echo "$overlayFSWrite OVERLAYFS可写目录 已存在"
   fi
-  if [ ! -f $overlayFSWork ]; then
+  if [ ! -d $overlayFSWork ]; then
     echo "创建$overlayFSWork OVERLAYFS工作目录"
     mkdir -p "$overlayFSWork"
   else
@@ -130,18 +138,6 @@ function init {
 
   cp $SOURCE_PATH/csgo-server-launcher.conf "$overlayFSRoot/csgo-server-launcher.conf"
   cp $SOURCE_PATH/csgoserver.cfg "$overlayFSRoot/csgoserver.cfg"
-
-  lineNumber=$(grep -n "$overlayFSMain" /etc/fstab |awk -F ":" '{print $1}')
-
-  if [ -n "$lineNumber" ]
-  then
-    sed -i "${lineNumber}c $overlayFSCommand" /etc/fstab
-  else
-    echo "$overlayFSCommand" >> /etc/fstab
-  fi
-
-  mount -a
-  mount | grep "$overlayFSMain"
 
   #刷新overlay相关目录权限
   chown ${USER}:${USER} "$overlayFSMain"
@@ -152,33 +148,36 @@ function init {
   #刷新sourcepath目录权限
   chown -R ${USER}:${USER} "$SOURCE_PATH"
 
-  echo "$serverName已成功挂载！使用命令'./csgo-server-launcher start $serverName'启动服务器"
+  echo "$overlayFSCommand" >> $MAP_FILE
+
+  echo "服务器 $serverName 初始化成功！使用命令'csgo-server-launcher start $serverName'启动服务器"
 }
 
 function delete() {
-  serverNum=$(mount -t overlay|awk 'END{print NR}')
-  if [ $serverNum -eq 0 ]
+  if [ ! -f "$MAP_FILE" ]
   then
-    echo "已创建服务器数量：$serverNum，没有可以删除的服务器！"
+    echo "本地未初始化任何服务器！"
     exit 1
   fi
+
   serverName="$@"
   overlayFSMain="$OVERLAY_PATH/$serverName/main"
   if [ "$serverName" = "" ]
   then
     echo "服务器名称不能为空！"
-    echo "请在delete命令后添加服务器名称，例：./csgo-server-launcher delete csgoserver"
+    echo "请在delete命令后添加服务器名称，例：csgo-server-launcher delete csgoserver"
     echo "已创建服务器："
-    mount -t overlay|awk '{ss=substr($3,length("'$OVERLAY_PATH'/")+1);print substr(ss,0,length(ss)-4)}'
+    awk '{ss=substr($2,length("'$OVERLAY_PATH'/")+1);print substr(ss,0,length(ss)-4)}' $MAP_FILE
     exit 1
-  else
-    if [[ $(mount -t overlay|grep $overlayFSMain) = "" ]]
-    then
-      echo "$serverName 服务器不存在，请重新输入！"
-      echo "已创建服务器："
-      mount -t overlay|awk '{ss=substr($3,length("'$OVERLAY_PATH'/")+1);print substr(ss,0,length(ss)-4)}'
-      exit 1
-    fi
+  fi
+
+  lineNumber=$(grep -n "$overlayFSMain" $MAP_FILE |awk -F ":" '{print $1}')
+  if [ ! -n "$lineNumber" ]
+  then
+    echo "$serverName 服务器不存在，请重新输入！"
+    echo "已创建服务器："
+    awk '{ss=substr($2,length("'$OVERLAY_PATH'/")+1);print substr(ss,0,length(ss)-4)}' $MAP_FILE
+    exit 1
   fi
 
   if status
@@ -186,7 +185,13 @@ function delete() {
     stop
     sleep 3
   fi
-  umount "$overlayFSMain"
+  sed -i "${lineNumber}d" $MAP_FILE
+  if [[ $(mount -t overlay|grep $overlayFSMain) != "" ]]
+  then
+    umount "$overlayFSMain"
+  fi
+
+  echo "服务器 $serverName 删除成功！"
 }
 
 function start {
@@ -202,10 +207,16 @@ function start {
     echo "该脚本不可在overlayFS文件系统中执行！请检查路径"
     exit 1
   fi
-  serverNum=$(mount -t overlay|awk 'END{print NR}')
+
+  if [ ! -f "$MAP_FILE" ]
+  then
+    echo "本地未初始化任何服务器！"
+    exit 1
+  fi
+  serverNum=$(awk 'END{print NR}' $MAP_FILE)
   if [ $serverNum -eq 0 ]
   then
-    echo "已创建服务器数量：$serverNum，请使用init命令创建服务器，再使用start命令启动！"
+    echo "本地未初始化任何服务器！请先使用init命令创建服务器！"
     exit 1
   fi
   serverName="$@"
@@ -213,18 +224,23 @@ function start {
   if [ "$serverName" = "" ]
   then
     echo "服务器名称不能为空！"
-    echo "请在start命令后添加服务器名称，例：./csgo-server-launcher start csgoserver"
+    echo "请在start命令后添加服务器名称，例：csgo-server-launcher start csgoserver"
     echo "已创建服务器："
-    mount -t overlay|awk '{ss=substr($3,length("'$OVERLAY_PATH'/")+1);print substr(ss,0,length(ss)-4)}'
+    awk '{ss=substr($2,length("'$OVERLAY_PATH'/")+1);print substr(ss,0,length(ss)-4)}' $MAP_FILE
     exit 1
-  else
-    if [[ $(mount -t overlay|grep "$overlayFSPath/main") = "" ]]
-    then
-      echo "$serverName 服务器不存在，请重新输入！"
-      echo "已创建服务器："
-      mount -t overlay|awk '{ss=substr($3,length("'$OVERLAY_PATH'/")+1);print substr(ss,0,length(ss)-4)}'
-      exit 1
-    fi
+  fi
+  lineNumber=$(grep -n "$overlayFSPath/main" $MAP_FILE |awk -F ":" '{print $1}')
+  if [ ! -n "$lineNumber" ]
+  then
+    echo "$serverName 服务器不存在，请重新输入！"
+    echo "已创建服务器："
+    awk '{ss=substr($2,length("'$OVERLAY_PATH'/")+1);print substr(ss,0,length(ss)-4)}' $MAP_FILE
+    exit 1
+  fi
+
+  if [[ $(mount -t overlay|grep "$overlayFSPath/main") = "" ]]
+  then
+    mount -t overlay overlay -o $(sed -n "$lineNumber"p $MAP_FILE)
   fi
 
   loadconfig $serverName
@@ -292,6 +308,11 @@ function stop {
     rm -f "$DIR_ROOT/screenlog.*"
   fi
   TEMP_SERVERS=$(echo $closedservers | awk -F . '{print $3}')
+  for line in $TEMP_SERVERS
+  do
+    echo "umount $OVERLAY_PATH/$line/main"
+    umount "$OVERLAY_PATH/$line/main"
+  done
 }
 
 function status {
@@ -601,6 +622,7 @@ DIR_LOGS="$HOME/logs"
 STEAM_RUNSCRIPT="$DIR_STEAMCMD/runscript_$SCREEN_NAME"
 DIR_ROOT="$SOURCE_PATH/root"
 DIR_PLUGIN="$SOURCE_PATH/plugin"
+MAP_FILE="$SOURCE_PATH/overlaymap"
 DIR_GAME="$DIR_ROOT/csgo"
 DAEMON_GAME="srcds_run"
 UPDATE_LOG="$DIR_LOGS/update_$(date +%Y%m%d).log"
@@ -667,7 +689,7 @@ case "$1" in
         exit 1
       fi
       echo "服务器名称不能为空！"
-      echo "请在change命令后添加服务器名称，例：./csgo-server-launcher change csgoserver"
+      echo "请在change命令后添加服务器名称，例：csgo-server-launcher change csgoserver"
       echo "已创建服务器："
       mount -t overlay|awk '{ss=substr($3,length("'$OVERLAY_PATH'/")+1);print substr(ss,0,length(ss)-4)}'
       exit 1
