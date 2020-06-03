@@ -314,9 +314,14 @@ function stop {
   do
     echo "umount $OVERLAY_PATH/$line/main"
     umount "$OVERLAY_PATH/$line/main"
-    sleep 2
     echo "rm -rf $OVERLAY_PATH/$line/write/*"
-    rm -rf "$OVERLAY_PATH/$line/write/*"
+    if [ $(id -u) -eq 0 ]
+    then
+      su - ${USER} -c "rm -rf $OVERLAY_PATH/$line/write/*"
+    else
+      rm -rf $OVERLAY_PATH/$line/write/*
+    fi
+    sleep 2
   done
 }
 
@@ -610,7 +615,7 @@ function loadconfig {
     INNER_CFG_PATH="$OVERLAY_PATH/$@/overlay/csgo/cfg"
     INNER_CFG_FILE="$INNER_CFG_PATH/csgoserver.cfg"
     if [ "$CFG_FILE" != "$INNER_CFG_FILE" ]; then
-      mkdir "$INNER_CFG_PATH"
+      mkdir -p "$INNER_CFG_PATH"
       \cp -f $CFG_FILE "$INNER_CFG_FILE"
       PARAM_START="${PARAM_START} +servercfgfile csgoserver.cfg"
     fi
