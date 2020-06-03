@@ -307,11 +307,15 @@ function stop {
     echo $closedservers | awk '{print "screen -r "$1" -X quit"}' | sh
     rm -f "$DIR_ROOT/screenlog.*"
   fi
+
+  sleep 5
   TEMP_SERVERS=$(echo $closedservers | awk -F . '{print $3}')
   for line in $TEMP_SERVERS
   do
     echo "umount $OVERLAY_PATH/$line/main"
     umount "$OVERLAY_PATH/$line/main"
+    echo "rm -rf $OVERLAY_PATH/$line/write/*"
+    rm -rf "$OVERLAY_PATH/$line/write/*"
   done
 }
 
