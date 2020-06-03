@@ -314,6 +314,7 @@ function stop {
   do
     echo "umount $OVERLAY_PATH/$line/main"
     umount "$OVERLAY_PATH/$line/main"
+    sleep 2
     echo "rm -rf $OVERLAY_PATH/$line/write/*"
     rm -rf "$OVERLAY_PATH/$line/write/*"
   done
