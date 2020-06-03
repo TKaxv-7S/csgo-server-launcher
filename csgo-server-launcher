@@ -607,8 +607,10 @@ function loadconfig {
   then
     echo "未找到 $CFG_FILE ，服务器将不会加载外部cfg！"
   else
-    INNER_CFG_FILE="$OVERLAY_PATH/$@/overlay/csgo/cfg/csgoserver.cfg"
+    INNER_CFG_PATH="$OVERLAY_PATH/$@/overlay/csgo/cfg"
+    INNER_CFG_FILE="$INNER_CFG_PATH/csgoserver.cfg"
     if [ "$CFG_FILE" != "$INNER_CFG_FILE" ]; then
+      mkdir "$INNER_CFG_PATH"
       \cp -f $CFG_FILE "$INNER_CFG_FILE"
       PARAM_START="${PARAM_START} +servercfgfile csgoserver.cfg"
     fi
