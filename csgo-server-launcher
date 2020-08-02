@@ -313,16 +313,23 @@ function stop {
   for line in $TEMP_SERVERS
   do
     echo "umount $OVERLAY_PATH/$line/main"
-    umount "$OVERLAY_PATH/$line/main"
-    echo "rm -rf $OVERLAY_PATH/$line/write/*"
     if [ $(id -u) -eq 0 ]
     then
-      su - ${USER} -c "rm -rf $OVERLAY_PATH/$line/write/*"
+      umount "$OVERLAY_PATH/$line/main"
     else
-      rm -rf $OVERLAY_PATH/$line/write/*
+      sudo umount "$OVERLAY_PATH/$line/main"
     fi
-    sleep 2
+#    echo "rm -rf $OVERLAY_PATH/$line/write/*"
+#    if [ $(id -u) -eq 0 ]
+#    then
+#      su - ${USER} -c "rm -rf $OVERLAY_PATH/$line/write/*"
+#    else
+#      rm -rf $OVERLAY_PATH/$line/write/*
+#    fi
+    sleep 5
   done
+  echo "已关闭以下服务器："
+  echo $TEMP_SERVERS
 }
 
 function status {
@@ -393,8 +400,6 @@ function update {
     then
       echo "关闭 $SCREEN_NAME 中..."
       stop
-      echo "已关闭以下服务器："
-      echo $TEMP_SERVERS
       sleep 5
       relaunch=1
     else
