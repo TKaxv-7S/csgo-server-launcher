@@ -447,14 +447,14 @@ function update {
   fi
 
   # Create runscript file for autoupdate
-  echo "Create runscript file '$STEAM_RUNSCRIPT' for autoupdate..."
-  cd "$DIR_STEAMCMD"
-  echo "login $STEAM_LOGIN $STEAM_PASSWORD" > "$STEAM_RUNSCRIPT"
-  echo "force_install_dir $DIR_ROOT" >> "$STEAM_RUNSCRIPT"
-  echo "app_update 740" >> "$STEAM_RUNSCRIPT"
-  echo "quit" >> "$STEAM_RUNSCRIPT"
-  chown ${USER}:${USER} "$STEAM_RUNSCRIPT"
-  chmod 600 "$STEAM_RUNSCRIPT"
+#  echo "Create runscript file '$STEAM_RUNSCRIPT' for autoupdate..."
+#  cd "$DIR_STEAMCMD"
+#  echo "login $STEAM_LOGIN $STEAM_PASSWORD" > "$STEAM_RUNSCRIPT"
+#  echo "force_install_dir $DIR_ROOT" >> "$STEAM_RUNSCRIPT"
+#  echo "app_update 740" >> "$STEAM_RUNSCRIPT"
+#  echo "quit" >> "$STEAM_RUNSCRIPT"
+#  chown ${USER}:${USER} "$STEAM_RUNSCRIPT"
+#  chmod 600 "$STEAM_RUNSCRIPT"
 
   # Patch srcds_run
   sed -i -e 's#\./steam\.sh #\./steamcmd\.sh #g' ${DIR_ROOT}/${DAEMON_GAME}
@@ -608,7 +608,8 @@ function loadconfig {
   MAXPLAYERS="14"
   TICKRATE="128"
   EXTRAPARAMS="-tvdisable -nohltv"
-  PARAM_START="-nobreakpad -game csgo -usercon -console -usercon -secure -autoupdate -steam_dir ${DIR_STEAMCMD} -steamcmd_script ${STEAM_RUNSCRIPT} -maxplayers_override ${MAXPLAYERS} -tickrate ${TICKRATE} +hostport ${PORT} +net_public_adr ${IP} +game_type ${GAMETYPE} +game_mode ${GAMEMODE} +mapgroup ${MAPGROUP} +map ${DEFAULTMAP} ${EXTRAPARAMS}"
+  # -autoupdate -steam_dir ${DIR_STEAMCMD} -steamcmd_script ${STEAM_RUNSCRIPT}
+  PARAM_START="-nobreakpad -game csgo -console -usercon -secure -maxplayers_override ${MAXPLAYERS} -tickrate ${TICKRATE} +hostport ${PORT} +net_public_adr ${IP} +game_type ${GAMETYPE} +game_mode ${GAMEMODE} +mapgroup ${MAPGROUP} +map ${DEFAULTMAP} ${EXTRAPARAMS}"
 
   # 加载配置
   source "$CONFIG_FILE"
