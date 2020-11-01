@@ -590,7 +590,12 @@ function usage {
 }
 
 function loadconfig {
-  CONFIG_FILE="$OVERLAY_PATH/$@/csgo-server-launcher.conf"
+  if [ "$@" = "" ]
+  then
+    CONFIG_FILE="$SOURCE_PATH/csgo-server-launcher.conf"
+  else
+    CONFIG_FILE="$OVERLAY_PATH/$@/csgo-server-launcher.conf"
+  fi
   # 检查配置文件
   if [ ! -f "$CONFIG_FILE" ]
   then
