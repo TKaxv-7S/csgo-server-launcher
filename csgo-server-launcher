@@ -499,6 +499,7 @@ function update {
 }
 
 function create {
+  loadconfig
   if [[ $SOURCE_PATH == ${OVERLAY_PATH}* ]]
   then
     echo "在OVERLAYFS文件系统下不可执行create方法！请使用start启动服务器"
